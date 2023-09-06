@@ -1,7 +1,7 @@
 import csv
-from tqdm import tqdm
 import logging
 from datetime import datetime
+from tqdm import tqdm
 from database_connection import Conexion
 
 class RNCRecord:
@@ -13,13 +13,28 @@ class RNCRecord:
         self.estado = estado.strip()
         self.tipo_contribuyente = tipo_contribuyente.strip()
 
-    def __str__(self):
-        return f"RNC: {self.rnc}, Nombre/Apellido: {self.nombre_apellido}, Actividad Económica: {self.actividad_economica}, Fecha: {self.fecha}, Estado: {self.estado}, Tipo de Contribuyente: {self.tipo_contribuyente}"
-
+   
 class DataBaseManager:
     def __init__(self):
         self.conexion = Conexion()
         self.conexion.test_connection()
+
+    def existe_registro(self, numero_registro):
+        """
+        Verifica si un registro ya existe en la base de datos.
+
+        Args:
+            numero_registro (str): El número de registro a verificar.
+
+        Returns:
+            bool: True si el registro existe, False si no.
+        """
+        try:
+            sql = 'SELECT EXISTS (SELECT 1 FROM RNC WHERE rnc = %s)'
+            self.conexion.cursor.execute(sql, (numero_registro,))
+            return self.conexion.cursor.fetchone()[0]
+        except Exception as e:
+            raise Exception(f'Error al verificar si el registro existe: {e}')
     
     def agregar_registros(self, registros):
         try:
@@ -32,8 +47,6 @@ class DataBaseManager:
         except Exception as e:
             self.conexion.conexion.rollback()
             raise Exception(f'Ha ocurrido un error al agregar los registros: {e}')
-
-
 
 def agregar_datos_desde_csv(file_path, batch_size=1000):
     """
@@ -60,16 +73,17 @@ def agregar_datos_desde_csv(file_path, batch_size=1000):
 
             for row in csv_reader:
                 if len(row) == 11:
-                    fecha = row[8].strip()  # Elimina espacios adicionales en la fecha
-                    if fecha and fecha != '00/00/0000':
-                        try:
-                            fecha = datetime.strptime(fecha, "%d/%m/%Y").strftime("%Y-%m-%d")
-                        except ValueError:
-                            fecha = None  # Asignar None si la fecha no es válida
-                    else:
-                        fecha = None  # Asignar None si la fecha está en blanco
-
-                    registros_lote.append(RNCRecord(row[0], row[1], row[3], fecha, row[9], row[10]))
+                    rnc = row[0]
+                    if not db_manager.existe_registro(rnc):
+                        fecha = row[8].strip()  # Elimina espacios adicionales en la fecha
+                        if fecha and fecha != '00/00/0000':
+                            try:
+                                fecha = datetime.strptime(fecha, "%d/%m/%Y").strftime("%Y-%m-%d")
+                            except ValueError:
+                                fecha = None  # Asignar None si la fecha no es válida
+                        else:
+                            fecha = None  # Asignar None si la fecha está en blanco
+                        registros_lote.append(RNCRecord(rnc, row[1], row[3], fecha, row[9], row[10]))
 
                     if len(registros_lote) >= batch_size:
                         try:
@@ -95,6 +109,4 @@ def agregar_datos_desde_csv(file_path, batch_size=1000):
         print(f'Total de registros agregados: {total_registros}')
     except FileNotFoundError:
         print('El archivo CSV no existe.')
-
-
 
