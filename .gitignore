@@ -1,0 +1,8 @@
+/Lib
+/Scripts
+/TMP
+/pyvenv.cfg
+/.vscode
+/__pycache__
+/src/.env
+/src/__pycache__
