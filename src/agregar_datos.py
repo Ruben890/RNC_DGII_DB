@@ -13,7 +13,7 @@ class RNCRecord:
         self.estado = estado.strip()
         self.tipo_contribuyente = tipo_contribuyente.strip()
 
-   
+
 class DataBaseManager:
     def __init__(self):
         self.conexion = Conexion()
@@ -67,7 +67,7 @@ def agregar_datos_desde_csv(file_path, batch_size=1000):
             next(csv_reader)  # Omite la primera línea si contiene encabezados
 
             registros_lote = []
-            pbar = tqdm(total=0)  # Inicializa la barra de progreso
+            pbar = tqdm(total=0, unit=' registros')  # Inicializa la barra de progreso
 
             db_manager = DataBaseManager()  # Crear una única instancia de DataBaseManager
 
@@ -90,17 +90,16 @@ def agregar_datos_desde_csv(file_path, batch_size=1000):
                             db_manager.agregar_registros(registros_lote)
                             total_registros += len(registros_lote)
                             registros_lote = []  # Reiniciar el lote
+                            pbar.update(batch_size)  # Actualizar la barra de progreso
                         except Exception as e:
                             logging.error('Error al agregar registros a la DB', exc_info=True)
-
-                        # Actualiza la barra de progreso con el número total de registros procesados
-                        pbar.update(batch_size)
 
             # Inserta cualquier lote restante
             if registros_lote:
                 try:
                     db_manager.agregar_registros(registros_lote)
                     total_registros += len(registros_lote)
+                    pbar.update(len(registros_lote))  # Actualizar la barra de progreso con el lote restante
                 except Exception as e:
                     logging.error('Error al agregar registros a la DB', exc_info=True)
 
@@ -109,4 +108,3 @@ def agregar_datos_desde_csv(file_path, batch_size=1000):
         print(f'Total de registros agregados: {total_registros}')
     except FileNotFoundError:
         print('El archivo CSV no existe.')
-
