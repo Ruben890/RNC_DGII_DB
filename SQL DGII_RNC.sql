@@ -7,5 +7,3 @@ CREATE TABLE RNC (
     estado  VARCHAR(50) NOT NULL,
     tipo_contribuyente VARCHAR(50) NOT NULL
 );
-
-select * from rnc;
